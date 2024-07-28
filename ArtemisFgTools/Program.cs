@@ -1,7 +1,6 @@
 ﻿using ImageMagick;
 using NLua;
 using System.Text.RegularExpressions;
-using System.Xml.Linq;
 namespace ArtemisFgTools
 {
     internal class Program
@@ -81,12 +80,13 @@ namespace ArtemisFgTools
                                 string pathWithSize = Path.Combine(fgImagePath, fgObject.Path, siz.ToString() ?? string.Empty);
                                 foreach (var pose in fgObject.Pose)
                                 {
-                                    foreach (var fuku in fgObject.Fuku)
+                                    Parallel.ForEach(fgObject.Fuku, fuku =>
+                                    //foreach (var  in )
                                     {
                                         bool special = false;
                                         string fuku_current = fuku;
                                         //if the tail of fuku is |0099, spec to true & remove |0099
-                                        if (fuku.EndsWith("|0099"))
+                                        if (fuku_current.EndsWith("|0099"))
                                         {
                                             special = true;
                                             fuku_current = fuku[0..^5];
@@ -102,7 +102,7 @@ namespace ArtemisFgTools
                                             ProcessAndSave(baseImg, layerImg, layer2Img, savePathWithAll, special);
                                         }
 
-                                    }
+                                    });
                                 }
                             }
                         }
@@ -113,11 +113,11 @@ namespace ArtemisFgTools
                             string pathWithSize = Path.Combine(fgImagePath, fgObject.Path, siz2.ToString() ?? string.Empty);
                             foreach (var pose in fgObject.Pose)
                             {
-                                foreach (var fuku in fgObject.Fuku)
+                                Parallel.ForEach(fgObject.Fuku, fuku =>
                                 {
                                     bool special = false;
                                     string fuku_current = fuku;
-                                    if (fuku.EndsWith("|0099"))
+                                    if (fuku_current.EndsWith("|0099"))
                                     {
                                         special = true;
                                         fuku_current = fuku[0..^5];
@@ -130,7 +130,7 @@ namespace ArtemisFgTools
                                         string savePathWithAll = Path.Combine(savePathWithSizePart, $"{fgObject.Head}no{pose[0]}{fuku_current}{pose[1]}0_{face}" + (special ? ($"_{pose[0]}0099.png") : (".png")));
                                         ProcessAndSave(baseImg, layerImg, layer2Img, savePathWithAll, special);
                                     }
-                                }
+                                });
                             }
                         }
                     }
