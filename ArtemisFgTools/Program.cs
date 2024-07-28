@@ -144,6 +144,11 @@ namespace ArtemisFgTools
 
         private static void ProcessAndSave(string baseImg, string layerImg, string layer2Img, string target, bool special)
         {
+            if (File.Exists(target)) 
+            {
+                Console.WriteLine($"{Path.GetFileName(target)}已存在，跳过！");
+                return;
+            }
             string? directory = Path.GetDirectoryName(target);
             if (!string.IsNullOrEmpty(directory) && !Directory.Exists(directory))
             {
@@ -284,7 +289,7 @@ namespace ArtemisFgTools
         {
             if (comment != null)
             {
-                string pattern = @"^pos,(\d+),(\d+),(\d+),(\d+)$";
+                string pattern = @"^pos,(-?\d+),(-?\d+),(-?\d+),(-?\d+)$";
                 Match match = Regex.Match(comment, pattern);
                 if (match.Success)
                 {
