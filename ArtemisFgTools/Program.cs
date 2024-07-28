@@ -81,15 +81,16 @@ namespace ArtemisFgTools
                                 foreach (var pose in fgObject.Pose)
                                 {
                                     Parallel.ForEach(fgObject.Fuku, fuku =>
-                                    //foreach (var  in )
                                     {
                                         bool special = false;
+                                        string special_text="";
                                         string fuku_current = fuku;
-                                        //if the tail of fuku is |0099, spec to true & remove |0099
-                                        if (fuku_current.EndsWith("|0099"))
+                                        int index = fuku_current.IndexOf('|');
+                                        if (index != -1)
                                         {
                                             special = true;
-                                            fuku_current = fuku[0..^5];
+                                            special_text = fuku_current[(index + 1)..];
+                                            fuku_current = fuku_current[..index];
                                         }
                                         // <head><siz><pose[0]><fuku><pose[1]>0
                                         // *sp:fuku: 02 | 0099→02fuku & 0099face
@@ -97,8 +98,8 @@ namespace ArtemisFgTools
                                         foreach (var face in fgObject.Face[pose[0]])
                                         {
                                             string layerImg = Path.Combine(pathWithSize, $"{face}.png");
-                                            string layer2Img = special ? Path.Combine(pathWithSize, $"{pose[0]}0099.png") : ""; //眼镜
-                                            string savePathWithAll = Path.Combine(savePathWithSizePart, $"{fgObject.Head}{siz}{pose[0]}{fuku_current}{pose[1]}0_{face}" + (special ? ($"_{pose[0]}0099.png") : (".png")));
+                                            string layer2Img = special ? Path.Combine(pathWithSize, $"{pose[0]}{special_text}.png") : ""; //眼镜
+                                            string savePathWithAll = Path.Combine(savePathWithSizePart, $"{fgObject.Head}{siz}{pose[0]}{fuku_current}{pose[1]}0_{face}" + (special ? ($"_{pose[0]}{special_text}.png") : (".png")));
                                             ProcessAndSave(baseImg, layerImg, layer2Img, savePathWithAll, special);
                                         }
 
@@ -116,18 +117,21 @@ namespace ArtemisFgTools
                                 Parallel.ForEach(fgObject.Fuku, fuku =>
                                 {
                                     bool special = false;
+                                    string special_text = "";
                                     string fuku_current = fuku;
-                                    if (fuku_current.EndsWith("|0099"))
+                                    int index = fuku_current.IndexOf('|');
+                                    if (index != -1)
                                     {
                                         special = true;
-                                        fuku_current = fuku[0..^5];
+                                        special_text = fuku_current[(index + 1)..];
+                                        fuku_current = fuku_current[..index];
                                     }
                                     string baseImg = Path.Combine(pathWithSize, $"{fgObject.Head}no{pose[0]}{fuku_current}{pose[1]}0.png");
                                     foreach (var face in fgObject.Face[pose[0]])
                                     {
                                         string layerImg = Path.Combine(pathWithSize, $"{face}.png");
-                                        string layer2Img = special ? Path.Combine(pathWithSize, $"{pose[0]}0099.png") : "";
-                                        string savePathWithAll = Path.Combine(savePathWithSizePart, $"{fgObject.Head}no{pose[0]}{fuku_current}{pose[1]}0_{face}" + (special ? ($"_{pose[0]}0099.png") : (".png")));
+                                        string layer2Img = special ? Path.Combine(pathWithSize, $"{pose[0]}{special_text}.png") : "";
+                                        string savePathWithAll = Path.Combine(savePathWithSizePart, $"{fgObject.Head}no{pose[0]}{fuku_current}{pose[1]}0_{face}" + (special ? ($"_{pose[0]}{special_text}.png") : (".png")));
                                         ProcessAndSave(baseImg, layerImg, layer2Img, savePathWithAll, special);
                                     }
                                 });

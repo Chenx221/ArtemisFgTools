@@ -2,11 +2,11 @@
 
 立绘合成
 
-只测试了 **セレクトオブリージュ**
+只测试了 **セレクトオブリージュ**、**ハミダシクリエイティブ**
 
 -----
 
-提取selectoblige.pfs中的fg文件夹（image\fg）、exlist.ipt文件（pc\ja\extra\exlist.ipt），准备好空文件夹以存放合并后的文件（这里以out为例）
+提取selectoblige.pfs中的fg文件夹（image\fg）、exlist.ipt文件（pc\ja\extra\exlist.ipt）或(system\table\exlist.tbl)，准备好空文件夹以存放合并后的文件（这里以out为例）
 
 ![](https://git.chenx221.cyou/chenx221/ArtemisFgTools/raw/branch/master/img/2024-07-28_172347.jpg)
 
