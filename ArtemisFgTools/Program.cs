@@ -1,5 +1,6 @@
 ﻿using ImageMagick;
 using NLua;
+using System.Reflection.Metadata.Ecma335;
 using System.Text.RegularExpressions;
 namespace ArtemisFgTools
 {
@@ -18,7 +19,7 @@ namespace ArtemisFgTools
             Console.WriteLine("请输入立绘fg文件夹的所在路径（无需\"\"）：");
             string? fgImagePath = Console.ReadLine();
 
-            Console.WriteLine("请输入exlist.ipt的文件路径：");
+            Console.WriteLine("请输入exlist的文件路径：");
             string? luaFilePath = Console.ReadLine();
 
             Console.WriteLine("请输入保存位置：");
@@ -82,6 +83,11 @@ namespace ArtemisFgTools
                                 {
                                     Parallel.ForEach(fgObject.Fuku, fuku =>
                                     {
+                                        //💢 skip //For ハミダシクリエイティブ
+                                        if (fuku == "99")
+                                        {
+                                            return;
+                                        }
                                         bool special = false;
                                         string special_text="";
                                         string fuku_current = fuku;
@@ -116,6 +122,11 @@ namespace ArtemisFgTools
                             {
                                 Parallel.ForEach(fgObject.Fuku, fuku =>
                                 {
+                                    //💢 skip //For ハミダシクリエイティブ
+                                    if (fuku == "99")
+                                    {
+                                        return;
+                                    }
                                     bool special = false;
                                     string special_text = "";
                                     string fuku_current = fuku;
