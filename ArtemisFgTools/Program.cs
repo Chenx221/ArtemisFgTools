@@ -1,5 +1,6 @@
 ﻿using ImageMagick;
 using NLua;
+using System.Text.RegularExpressions;
 namespace ArtemisFgTools
 {
     internal class Program
@@ -44,8 +45,7 @@ namespace ArtemisFgTools
                     }
                     Console.WriteLine($"fg count: {fgObjects.Count}");
                     //Todo: Combine fgObjects with image position
-                    //Todo: Get image position from png comment
-                    String comment = ReadPngComment("G:/x221.local/fg/baa/fa/a0001.png");
+                    List<int> comment = ReadPngComment("G:/x221.local/fg/baa/fa/a0001.png");
 
                 }
                 else
@@ -164,16 +164,30 @@ namespace ArtemisFgTools
             return result;
         }
 
-        public static string ReadPngComment(string filePath)
+        public static List<int> ReadPngComment(string filePath)
         {
             if (File.Exists(filePath))
             {
                 // Read image from file
                 using var image = new MagickImage(filePath);
 
-                if(image.Comment != null)
+                if (image.Comment != null)
                 {
-                    return image.Comment;
+                    string pattern = @"^pos,(\d+),(\d+),(\d+),(\d+)$";
+                    Match match = Regex.Match(image.Comment, pattern);
+                    if (match.Success)
+                    {
+                        int x = int.Parse(match.Groups[1].Value);
+                        int y = int.Parse(match.Groups[2].Value);
+                        int w = int.Parse(match.Groups[3].Value);
+                        int h = int.Parse(match.Groups[4].Value);
+
+                        return [x, y, w, h];
+                    }
+                    else
+                    {
+                        throw new Exception("Unexpected result");
+                    }
                 }
                 else
                 {
@@ -182,7 +196,7 @@ namespace ArtemisFgTools
             }
             else
             {
-                Console.WriteLine("File does not exist.");
+                throw new Exception("File does not exist.");
             }
         }
 
