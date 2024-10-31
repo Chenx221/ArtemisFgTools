@@ -12,26 +12,39 @@ namespace ArtemisFgTools
             Console.WriteLine("请输入立绘fg文件夹的所在路径（无需\"\"）：");
             string? fgImagePath = Console.ReadLine();
 
-            Console.WriteLine("要合并的游戏有找到exlist吗？(y/n) ");
+            Console.WriteLine("有找到exlist吗？(y/n) ");
             string spModeStr = Console.ReadLine() ?? throw new Exception("Invalid input");
             bool spMode = (spModeStr == "n") || (spModeStr == "y" ? false : throw new Exception("Invalid input"));
-            string? luaFilePath = Console.ReadLine();
-            if (spMode)
-            {
-                dosth();
-                return;
-            }
-
-
-
-
-
-
 
             Console.WriteLine("请输入保存位置：");
             string? savePath = Console.ReadLine();
+            if (!Directory.Exists(savePath))
+                Directory.CreateDirectory(savePath);
 
-            if (string.IsNullOrEmpty(fgImagePath) || string.IsNullOrEmpty(luaFilePath) || string.IsNullOrEmpty(savePath))
+            if (spMode)
+            {
+                Console.WriteLine("请输入script文件夹的所在路径：");
+                string? scriptPath = Console.ReadLine();
+                if (string.IsNullOrEmpty(fgImagePath) || string.IsNullOrEmpty(savePath) || string.IsNullOrEmpty(scriptPath))
+                {
+                    Console.WriteLine("路径不能为空");
+                    return;
+                }
+                if (!Directory.Exists(fgImagePath) || !Directory.Exists(scriptPath))
+                {
+                    Console.WriteLine("路径不存在");
+                    return;
+                }
+                List<FgObject> fgObjects = FetchFgObjectsFromScript(scriptPath);
+                Process(fgImagePath, savePath, size, fgObjects);
+                //我忘了size是干啥的了...
+                return;
+            }
+
+            Console.WriteLine("请输入exlist的文件路径：");
+            string? luaFilePath = Console.ReadLine();
+
+            if (string.IsNullOrEmpty(fgImagePath) || string.IsNullOrEmpty(savePath) || string.IsNullOrEmpty(luaFilePath))
             {
                 Console.WriteLine("路径不能为空");
                 return;
@@ -41,10 +54,6 @@ namespace ArtemisFgTools
                 Console.WriteLine("路径不存在");
                 return;
             }
-            if (!Directory.Exists(savePath))
-            {
-                Directory.CreateDirectory(savePath);
-            }
 
             Dictionary<object, object>? dictionary = ParseLuaTable(luaFilePath);
 
@@ -53,9 +62,7 @@ namespace ArtemisFgTools
                 if (dictionary["fg"] is Dictionary<object, object> fgDictionary)
                 {
                     if (fgDictionary["size"] is not List<object> size || size.Count == 0)
-                    {
                         throw new Exception("size not found or empty");
-                    }
                     fgDictionary.Remove("size");
 
                     //convert to FgObject
@@ -78,95 +85,93 @@ namespace ArtemisFgTools
                         }
                     }
                     //jmp
-                    foreach (var fgObject in fgObjects)
-                    {
-                        foreach (var siz in size)
-                        {
-                            if (siz != null && fgObject.Path != null)
-                            {
-                                string savePathWithSizePart = Path.Combine(savePath, fgObject.Path, siz.ToString() ?? string.Empty);
-                                string pathWithSize = Path.Combine(fgImagePath, fgObject.Path, siz.ToString() ?? string.Empty);
-                                foreach (var pose in fgObject.Pose)
-                                {
-                                    Parallel.ForEach(fgObject.Fuku, fuku =>
-                                    {
-                                        //💢 skip //For ハミダシクリエイティブ
-                                        if (fuku == "99")
-                                        {
-                                            return;
-                                        }
-                                        bool special = false;
-                                        string special_text = "";
-                                        string fuku_current = fuku;
-                                        int index = fuku_current.IndexOf('|');
-                                        if (index != -1)
-                                        {
-                                            special = true;
-                                            special_text = fuku_current[(index + 1)..];
-                                            fuku_current = fuku_current[..index];
-                                        }
-                                        // <head><siz><pose[0]><fuku><pose[1]>0
-                                        // *sp:fuku: 02 | 0099→02fuku & 0099face
-                                        string baseImg = Path.Combine(pathWithSize, $"{fgObject.Head}{siz}{pose[0]}{fuku_current}{pose[1]}0.png");
-                                        foreach (var face in fgObject.Face[pose[0]])
-                                        {
-                                            string layerImg = Path.Combine(pathWithSize, $"{face}.png");
-                                            string layer2Img = special ? Path.Combine(pathWithSize, $"{pose[0]}{special_text}.png") : ""; //眼镜
-                                            string savePathWithAll = Path.Combine(savePathWithSizePart, $"{fgObject.Head}{siz}{pose[0]}{fuku_current}{pose[1]}0_{face}" + (special ? ($"_{pose[0]}{special_text}.png") : (".png")));
-                                            ProcessAndSave(baseImg, layerImg, layer2Img, savePathWithAll, special);
-                                        }
-
-                                    });
-                                }
-                            }
-                        }
-                        string siz2 = "fa"; //别急着换下一个，还有个fa //这里的代码和上面那块一样
-                        if (fgObject.Path != null)
-                        {
-                            string savePathWithSizePart = Path.Combine(savePath, fgObject.Path, siz2.ToString() ?? string.Empty);
-                            string pathWithSize = Path.Combine(fgImagePath, fgObject.Path, siz2.ToString() ?? string.Empty);
-                            foreach (var pose in fgObject.Pose)
-                            {
-                                Parallel.ForEach(fgObject.Fuku, fuku =>
-                                {
-                                    //💢 skip //For ハミダシクリエイティブ
-                                    if (fuku == "99")
-                                    {
-                                        return;
-                                    }
-                                    bool special = false;
-                                    string special_text = "";
-                                    string fuku_current = fuku;
-                                    int index = fuku_current.IndexOf('|');
-                                    if (index != -1)
-                                    {
-                                        special = true;
-                                        special_text = fuku_current[(index + 1)..];
-                                        fuku_current = fuku_current[..index];
-                                    }
-                                    string baseImg = Path.Combine(pathWithSize, $"{fgObject.Head}no{pose[0]}{fuku_current}{pose[1]}0.png");
-                                    foreach (var face in fgObject.Face[pose[0]])
-                                    {
-                                        string layerImg = Path.Combine(pathWithSize, $"{face}.png");
-                                        string layer2Img = special ? Path.Combine(pathWithSize, $"{pose[0]}{special_text}.png") : "";
-                                        string savePathWithAll = Path.Combine(savePathWithSizePart, $"{fgObject.Head}no{pose[0]}{fuku_current}{pose[1]}0_{face}" + (special ? ($"_{pose[0]}{special_text}.png") : (".png")));
-                                        ProcessAndSave(baseImg, layerImg, layer2Img, savePathWithAll, special);
-                                    }
-                                });
-                            }
-                        }
-                    }
+                    Process(fgImagePath, savePath, size, fgObjects);
                 }
                 else
-                {
                     Console.WriteLine("fg not found");
-                }
             }
         }
 
-        private static void dosth()
+        private static void Process(string? fgImagePath, string? savePath, List<object> size, List<FgObject> fgObjects)
         {
-            throw new NotImplementedException();
+            foreach (var fgObject in fgObjects)
+            {
+                foreach (var siz in size)
+                {
+                    if (siz != null && fgObject.Path != null)
+                    {
+                        string savePathWithSizePart = Path.Combine(savePath, fgObject.Path, siz.ToString() ?? string.Empty);
+                        string pathWithSize = Path.Combine(fgImagePath, fgObject.Path, siz.ToString() ?? string.Empty);
+                        foreach (var pose in fgObject.Pose)
+                        {
+                            Parallel.ForEach(fgObject.Fuku, fuku =>
+                            {
+                                //💢 skip //For ハミダシクリエイティブ
+                                if (fuku == "99")
+                                {
+                                    return;
+                                }
+                                bool special = false;
+                                string special_text = "";
+                                string fuku_current = fuku;
+                                int index = fuku_current.IndexOf('|');
+                                if (index != -1)
+                                {
+                                    special = true;
+                                    special_text = fuku_current[(index + 1)..];
+                                    fuku_current = fuku_current[..index];
+                                }
+                                // <head><siz><pose[0]><fuku><pose[1]>0
+                                // *sp:fuku: 02 | 0099→02fuku & 0099face
+                                string baseImg = Path.Combine(pathWithSize, $"{fgObject.Head}{siz}{pose[0]}{fuku_current}{pose[1]}0.png");
+                                foreach (var face in fgObject.Face[pose[0]])
+                                {
+                                    string layerImg = Path.Combine(pathWithSize, $"{face}.png");
+                                    string layer2Img = special ? Path.Combine(pathWithSize, $"{pose[0]}{special_text}.png") : ""; //眼镜
+                                    string savePathWithAll = Path.Combine(savePathWithSizePart, $"{fgObject.Head}{siz}{pose[0]}{fuku_current}{pose[1]}0_{face}" + (special ? ($"_{pose[0]}{special_text}.png") : (".png")));
+                                    ProcessAndSave(baseImg, layerImg, layer2Img, savePathWithAll, special);
+                                }
+
+                            });
+                        }
+                    }
+                }
+                string siz2 = "fa"; //别急着换下一个，还有个fa //这里的代码和上面那块一样
+                if (fgObject.Path != null)
+                {
+                    string savePathWithSizePart = Path.Combine(savePath, fgObject.Path, siz2.ToString() ?? string.Empty);
+                    string pathWithSize = Path.Combine(fgImagePath, fgObject.Path, siz2.ToString() ?? string.Empty);
+                    foreach (var pose in fgObject.Pose)
+                    {
+                        Parallel.ForEach(fgObject.Fuku, fuku =>
+                        {
+                            //💢 skip //For ハミダシクリエイティブ
+                            if (fuku == "99")
+                            {
+                                return;
+                            }
+                            bool special = false;
+                            string special_text = "";
+                            string fuku_current = fuku;
+                            int index = fuku_current.IndexOf('|');
+                            if (index != -1)
+                            {
+                                special = true;
+                                special_text = fuku_current[(index + 1)..];
+                                fuku_current = fuku_current[..index];
+                            }
+                            string baseImg = Path.Combine(pathWithSize, $"{fgObject.Head}no{pose[0]}{fuku_current}{pose[1]}0.png");
+                            foreach (var face in fgObject.Face[pose[0]])
+                            {
+                                string layerImg = Path.Combine(pathWithSize, $"{face}.png");
+                                string layer2Img = special ? Path.Combine(pathWithSize, $"{pose[0]}{special_text}.png") : "";
+                                string savePathWithAll = Path.Combine(savePathWithSizePart, $"{fgObject.Head}no{pose[0]}{fuku_current}{pose[1]}0_{face}" + (special ? ($"_{pose[0]}{special_text}.png") : (".png")));
+                                ProcessAndSave(baseImg, layerImg, layer2Img, savePathWithAll, special);
+                            }
+                        });
+                    }
+                }
+            }
         }
 
         private static void ProcessAndSave(string baseImg, string layerImg, string layer2Img, string target, bool special)
