@@ -1,26 +1,32 @@
 ﻿using ImageMagick;
 using NLua;
-using System.Reflection.Metadata.Ecma335;
 using System.Text.RegularExpressions;
+using static ArtemisFgTools.FgHelper;
 namespace ArtemisFgTools
 {
     internal class Program
     {
-        public class FgObject(string path, string head, List<string> fuku, List<List<string>> pose, Dictionary<string, List<string>> face)
-        {
-            public string Path { get; set; } = path;
-            public string Head { get; set; } = head;
-            public List<string> Fuku { get; set; } = fuku;
-            public List<List<string>> Pose { get; set; } = pose;
-            public Dictionary<string, List<string>> Face { get; set; } = face;
-        }
+
         static void Main()
         {
             Console.WriteLine("请输入立绘fg文件夹的所在路径（无需\"\"）：");
             string? fgImagePath = Console.ReadLine();
 
-            Console.WriteLine("请输入exlist的文件路径：");
+            Console.WriteLine("要合并的游戏有找到exlist吗？(y/n) ");
+            string spModeStr = Console.ReadLine() ?? throw new Exception("Invalid input");
+            bool spMode = (spModeStr == "n") || (spModeStr == "y" ? false : throw new Exception("Invalid input"));
             string? luaFilePath = Console.ReadLine();
+            if (spMode)
+            {
+                dosth();
+                return;
+            }
+
+
+
+
+
+
 
             Console.WriteLine("请输入保存位置：");
             string? savePath = Console.ReadLine();
@@ -71,6 +77,7 @@ namespace ArtemisFgTools
                             fgObjects.Add(new FgObject(path, head, fuku, pose, face));
                         }
                     }
+                    //jmp
                     foreach (var fgObject in fgObjects)
                     {
                         foreach (var siz in size)
@@ -89,7 +96,7 @@ namespace ArtemisFgTools
                                             return;
                                         }
                                         bool special = false;
-                                        string special_text="";
+                                        string special_text = "";
                                         string fuku_current = fuku;
                                         int index = fuku_current.IndexOf('|');
                                         if (index != -1)
@@ -157,9 +164,14 @@ namespace ArtemisFgTools
             }
         }
 
+        private static void dosth()
+        {
+            throw new NotImplementedException();
+        }
+
         private static void ProcessAndSave(string baseImg, string layerImg, string layer2Img, string target, bool special)
         {
-            if (File.Exists(target)) 
+            if (File.Exists(target))
             {
                 Console.WriteLine($"{Path.GetFileName(target)}已存在，跳过！");
                 return;
