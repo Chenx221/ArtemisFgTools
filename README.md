@@ -17,3 +17,11 @@
 等待完成...
 
 ![](https://git.chenx221.cyou/chenx221/ArtemisFgTools/raw/branch/master/img/2024-07-28_172940.jpg)
+
+-----
+
+セレクトオブリージュ全部合并，大小约14.4 GB
+
+ハミダシクリエイティブ全部合并，大小约27.0 GB
+
+（应该可以通过修改exlist内容实现合并部分内容）
