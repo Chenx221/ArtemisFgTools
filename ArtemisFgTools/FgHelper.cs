@@ -1,4 +1,5 @@
-﻿using System.Reflection;
+﻿using System.Collections.Generic;
+using System.Reflection;
 using System.Xml.Linq;
 
 namespace ArtemisFgTools
@@ -40,7 +41,7 @@ namespace ArtemisFgTools
                 return HashCode.Combine(ChName, Size, File, Face);
             }
         }
-        public static HashSet<FgRecord> FetchFgObjectsFromScript(string path)
+        public static HashSet<FgRecord> FetchFgRecordsFromScript(string path)
         {
             if (!Directory.Exists(path))
                 throw new DirectoryNotFoundException("The path does not exist.");
@@ -77,6 +78,81 @@ namespace ArtemisFgTools
             }
         }
 
+        public static HashSet<FgRecord> FetchFgObjectsDirect(string path)
+        {
+            if (!Directory.Exists(path))
+                throw new DirectoryNotFoundException("The path does not exist.");
+            else
+            {
+                HashSet<FgRecord> fgRecords = [];
+                //获取path文件夹下所有文件夹（不含子文件夹）
+                string[] charaDirs = Directory.GetDirectories(path);
+                foreach (string charaDir in charaDirs)
+                {
+                    string chName = Path.GetFileName(charaDir);
+                    string[] sizeDirs = Directory.GetDirectories(charaDir);
+                    foreach (string sizeDir in sizeDirs)
+                    {
+                        string size = Path.GetFileName(sizeDir);
+                        string[] files = Directory.GetFiles(sizeDir, "*.png");
+                        Dictionary<string, List<string>> baseFiles = new Dictionary<string, List<string>>();
+                        Dictionary<string, List<string>> faceFiles = new Dictionary<string, List<string>>();
+                        foreach (string file in files)
+                        {
+                            string fileName = Path.GetFileNameWithoutExtension(file);
+                            if (fileName.StartsWith(chName)) //base
+                            {
+                                string[] parts = fileName.Split('_');
+                                if (parts.Length < 2)
+                                    throw new Exception("Not supported character name format.");
+                                string category = parts[1][2].ToString();
+                                if (!baseFiles.TryGetValue(category, out List<string>? value))
+                                {
+                                    value = ([]);
+                                    baseFiles[category] = value;
+                                }
+                                value.Add(fileName);
+                            }
+                            else //face
+                            {
+                                string category = fileName[0].ToString();
+                                if (!faceFiles.TryGetValue(category, out List<string>? value))
+                                {
+                                    value = ([]);
+                                    faceFiles[category] = value;
+                                }
+                                value.Add(fileName);
+                            }
+
+                        }
+                        foreach (var baseEntry in baseFiles)
+                        {
+                            string baseCategory = baseEntry.Key; // 获取 base 文件的类别
+                            var baseFileNames = baseEntry.Value; // 获取对应的 base 文件名列表
+                            // 检查是否存在相同类别的 face 文件
+                            if (faceFiles.TryGetValue(baseCategory, out List<string>? faceFileNames))
+                            {
+                                foreach (var baseFile in baseFileNames)
+                                {
+                                    foreach (var faceFile in faceFileNames)
+                                    {
+                                        FgRecord fgRecord = new()
+                                        {
+                                            ChName = chName,
+                                            Size = size,
+                                            File = baseFile,
+                                            Face = faceFile
+                                        };
+                                        fgRecords.Add(fgRecord);
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+                return fgRecords;
+            }
+        }
         public static FgRecord? ParseScriptFGLine(string input)
         {
             FgRecord fgRecord = new();

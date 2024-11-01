@@ -15,6 +15,22 @@ namespace ArtemisFgTools
                 else
                     Console.WriteLine("Invalid arguments, Please check the usage via -h");
             }
+            else if(args.Length == 4)
+            {
+                //暴力合成
+                if (args[0] != "-c" || args[2] != "-o")
+                    Console.WriteLine("Invalid arguments, Please check the usage via -h");
+                else
+                {
+                    if (!Directory.Exists(args[3]))
+                        Directory.CreateDirectory(args[3]);
+                    if (!Directory.Exists(args[1]))
+                        Console.WriteLine("Invalid fg path");
+                    else
+                        PreProcess3(args[1], args[3]);
+                }
+
+            }
             else if (args.Length != 6)
                 Console.WriteLine("Invalid arguments, Please check the usage via -h");
             else if (args[0] != "-c" || !(args[2] == "-s" || args[2] == "-t") || args[4] != "-o")
@@ -45,9 +61,18 @@ namespace ArtemisFgTools
             Console.ReadKey();
         }
 
+        private static void PreProcess3(string fgImagePath, string savePath)
+        {
+            //直接暴力处理，只认定底和脸
+            HashSet<FgRecord> fgRecords = FetchFgObjectsDirect(fgImagePath);
+            if (fgRecords.Count == 0)
+                throw new Exception("No valid fg object found.");
+            Process2(fgImagePath, savePath, fgRecords);
+        }
+
         private static void PreProcess2(string fgImagePath, string savePath, string scriptPath)
         {
-            HashSet<FgRecord> fgRecords = FetchFgObjectsFromScript(scriptPath);
+            HashSet<FgRecord> fgRecords = FetchFgRecordsFromScript(scriptPath);
             if (fgRecords.Count == 0)
                 throw new Exception("No valid fg object found.");
             //重新写个，我也懒得将FgRecord转FgObject了
