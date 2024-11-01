@@ -1,0 +1,8 @@
+{
+  "profiles": {
+    "ArtemisFgTools": {
+      "commandName": "Project",
+      "commandLineArgs": "-c\r\nG:\\x221.local\\1\\lab\\fg\r\n-s\r\nG:\\x221.local\\1\\lab\\script\r\n-o\r\nG:\\x221.local\\1\\lab\\output"
+    }
+  }
+}

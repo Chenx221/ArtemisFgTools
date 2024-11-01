@@ -1,4 +1,7 @@
-﻿namespace ArtemisFgTools
+﻿using System.Reflection;
+using System.Xml.Linq;
+
+namespace ArtemisFgTools
 {
     public class FgHelper
     {
@@ -10,10 +13,35 @@
             public List<List<string>> Pose { get; set; } = pose;
             public Dictionary<string, List<string>> Face { get; set; } = face;
         }
-
-        public static List<FgObject> FetchFgObjectsFromScript(string path)
+        //{"fg",ch="零",size="z1",mx=40,mode=3,resize=1,path=":fg/rei/z1/",file="rei_z1a0200",face="a0001",head="rei_z1a",lv=4,id=11},
+        public class FgRecord : IEquatable<FgRecord>
         {
-            //检查path是否存在，然后foreach获得文件夹下所有.ast文件，循环
+            public string ChName { get; set; }
+            public string Size { get; set; }
+            public string File { get; set; }
+            public string Face { get; set; }
+
+            public override bool Equals(object? obj)
+            {
+                return Equals(obj as FgRecord);
+            }
+
+            public bool Equals(FgRecord? other)
+            {
+                return other != null &&
+                       ChName == other.ChName &&
+                       Size == other.Size &&
+                       File == other.File &&
+                       Face == other.Face;
+            }
+
+            public override int GetHashCode()
+            {
+                return HashCode.Combine(ChName, Size, File, Face);
+            }
+        }
+        public static HashSet<FgRecord> FetchFgObjectsFromScript(string path)
+        {
             if (!Directory.Exists(path))
                 throw new DirectoryNotFoundException("The path does not exist.");
             else
@@ -33,45 +61,64 @@
                     throw new Exception("No valid fg script line found.");
                 else
                 {
-                    List<FgObject> fgObjects = [];
+                    HashSet<FgRecord> fgRecords = [];
                     foreach (var line in fgScriptLine)
                     {
-                        FgObject fgObject = ParseScriptFGLine(line);
-                        // TODO:如果fgObject未被添加到fgObjects中，添加
-                        fgObjects.Add(fgObject);
+                        FgRecord? fgRecord = ParseScriptFGLine(line);
+                        if (fgRecord != null)
+                            fgRecords.Add(fgRecord);
+
                     }
-                    if (fgObjects.Count == 0)
+                    if (fgRecords.Count == 0)
                         throw new Exception("No valid fg object found.");
                     else
-                        return fgObjects;
+                        return fgRecords;
                 }
             }
         }
 
-        public static FgObject ParseScriptFGLine(string input)
+        public static FgRecord? ParseScriptFGLine(string input)
         {
+            FgRecord fgRecord = new();
             input = input.Trim('{', '}');
-
             var pairs = input.Split(',');
-
-            var result = new Dictionary<string, string>();
-
             foreach (var pair in pairs)
             {
                 var keyValue = pair.Split(['=', '='], 2);
                 if (keyValue.Length == 2)
                 {
                     string key = keyValue[0].Trim();
-                    string value = keyValue[1].Trim().Trim('"'); // 去掉引号
-                    result[key] = value;
+                    string value = keyValue[1].Trim().Trim('"').Trim('}');
+                    PropertyInfo? property = typeof(FgRecord).GetProperty(char.ToUpper(key[0]) + key[1..]);
+                    if (property != null)
+                    {
+                        if (property.PropertyType == typeof(int))
+                        {
+                            if (int.TryParse(value, out int intValue))
+                                property.SetValue(fgRecord, intValue);
+                            else
+                                throw new Exception($"Invalid integer value '{value}' for property '{key}'.");
+                        }
+                        else if (property.PropertyType == typeof(string))
+                        {
+                            property.SetValue(fgRecord, value);
+                        }
+                        // 其他类型的处理可以在这里添加
+                    }
                 }
             }
-            foreach (var kv in result)
-            {
-                Console.WriteLine($"{kv.Key}: {kv.Value}");
-            }
+            //补个chname
+            if (fgRecord.File != null)
+                fgRecord.ChName = GetCharacterEngName(fgRecord.File);
+            return fgRecord.Size == null ? null : fgRecord;
+        }
 
-            throw new NotImplementedException();
+        public static string GetCharacterEngName(string input)
+        {
+            int underscoreIndex = input.IndexOf('_');
+            if (underscoreIndex > 0)
+                return input[..underscoreIndex];
+            throw new Exception("Not supported character name format.");
         }
     }
 }

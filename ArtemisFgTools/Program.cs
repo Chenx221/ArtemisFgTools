@@ -6,93 +6,121 @@ namespace ArtemisFgTools
 {
     internal class Program
     {
-
-        static void Main()
+        static void Main(string[] args)
         {
-            Console.WriteLine("请输入立绘fg文件夹的所在路径（无需\"\"）：");
-            string? fgImagePath = Console.ReadLine();
-
-            Console.WriteLine("有找到exlist吗？(y/n) ");
-            string spModeStr = Console.ReadLine() ?? throw new Exception("Invalid input");
-            bool spMode = (spModeStr == "n") || (spModeStr == "y" ? false : throw new Exception("Invalid input"));
-
-            Console.WriteLine("请输入保存位置：");
-            string? savePath = Console.ReadLine();
-            if (!Directory.Exists(savePath))
-                Directory.CreateDirectory(savePath);
-
-            if (spMode)
+            if (args.Length == 1)
             {
-                Console.WriteLine("请输入script文件夹的所在路径：");
-                string? scriptPath = Console.ReadLine();
-                if (string.IsNullOrEmpty(fgImagePath) || string.IsNullOrEmpty(savePath) || string.IsNullOrEmpty(scriptPath))
-                {
-                    Console.WriteLine("路径不能为空");
-                    return;
-                }
-                if (!Directory.Exists(fgImagePath) || !Directory.Exists(scriptPath))
-                {
-                    Console.WriteLine("路径不存在");
-                    return;
-                }
-                List<FgObject> fgObjects = FetchFgObjectsFromScript(scriptPath);
-                Process(fgImagePath, savePath, size, fgObjects);
-                //我忘了size是干啥的了...
-                return;
+                if (args[0] == "-h")
+                    Console.WriteLine("Usage: tools.exe -c <fgPath> (-s <scriptPath> | -t <luaTablePath>) -o <outputPath>");
+                else
+                    Console.WriteLine("Invalid arguments, Please check the usage via -h");
             }
-
-            Console.WriteLine("请输入exlist的文件路径：");
-            string? luaFilePath = Console.ReadLine();
-
-            if (string.IsNullOrEmpty(fgImagePath) || string.IsNullOrEmpty(savePath) || string.IsNullOrEmpty(luaFilePath))
+            else if (args.Length != 6)
+                Console.WriteLine("Invalid arguments, Please check the usage via -h");
+            else if (args[0] != "-c" || !(args[2] == "-s" || args[2] == "-t") || args[4] != "-o")
+                Console.WriteLine("Invalid arguments, Please check the usage via -h");
+            else
             {
-                Console.WriteLine("路径不能为空");
-                return;
-            }
-            if (!Directory.Exists(fgImagePath) || !File.Exists(luaFilePath))
-            {
-                Console.WriteLine("路径不存在");
-                return;
-            }
-
-            Dictionary<object, object>? dictionary = ParseLuaTable(luaFilePath);
-
-            if (dictionary != null)
-            {
-                if (dictionary["fg"] is Dictionary<object, object> fgDictionary)
+                if (!Directory.Exists(args[5]))
+                    Directory.CreateDirectory(args[5]);
+                if (!Directory.Exists(args[1]))
+                    Console.WriteLine("Invalid fg path");
+                else if (args[2] == "-s")
                 {
-                    if (fgDictionary["size"] is not List<object> size || size.Count == 0)
-                        throw new Exception("size not found or empty");
-                    fgDictionary.Remove("size");
-
-                    //convert to FgObject
-                    List<FgObject> fgObjects = [];
-                    foreach (var fg in fgDictionary)
-                    {
-                        if (fg.Value is Dictionary<object, object> fgValue)
-                        {
-                            var fuku = ConvertToStringList(fgValue["fuku"] as List<object>);
-                            var pose = ConvertToNestedStringList(fgValue["pose"] as List<object>);
-                            var face = ConvertToStringDictionary(fgValue["face"] as Dictionary<object, object>);
-                            //check null
-                            if (fgValue["path"] is not string path || fgValue["head"] is not string head || fuku == null || pose == null || face == null)
-                            {
-                                Console.WriteLine("fg object has null value");
-                                continue;
-                            }
-                            path = path[4..]; // remove :fg/../
-                            fgObjects.Add(new FgObject(path, head, fuku, pose, face));
-                        }
-                    }
-                    //jmp
-                    Process(fgImagePath, savePath, size, fgObjects);
+                    if (!Directory.Exists(args[3]))
+                        Console.WriteLine("Invalid script path");
+                    else
+                        PreProcess2(args[1], args[5], args[3]);
                 }
                 else
-                    Console.WriteLine("fg not found");
+                {
+                    if (!File.Exists(args[3]))
+                        Console.WriteLine("Invalid lua table path");
+                    else
+                        PreProcess(args[1], args[5], args[3]);
+                }
             }
+
+            Console.WriteLine("Press any key to exit...");
+            Console.ReadKey();
         }
 
-        private static void Process(string? fgImagePath, string? savePath, List<object> size, List<FgObject> fgObjects)
+        private static void PreProcess2(string fgImagePath, string savePath, string scriptPath)
+        {
+            HashSet<FgRecord> fgRecords = FetchFgObjectsFromScript(scriptPath);
+            if (fgRecords.Count == 0)
+                throw new Exception("No valid fg object found.");
+            //重新写个，我也懒得将FgRecord转FgObject了
+            //Tips:如果有单独饰品素材，可能前面的解析会有遗漏 //反正遥かなるニライカナイ里没有戴眼镜的角色 (笑
+            Process2(fgImagePath, savePath, fgRecords);
+        }
+
+        private static void PreProcess(string fgImagePath, string savePath, string luaFilePath)
+        {
+            Dictionary<object, object> dictionary = ParseLuaTable(luaFilePath) ?? throw new Exception("Lua table parsing failed");
+
+            if (dictionary["fg"] is Dictionary<object, object> fgDictionary)
+            {
+                if (fgDictionary["size"] is not List<object> size || size.Count == 0)
+                    throw new Exception("size not found or empty");
+                fgDictionary.Remove("size");
+
+                List<FgObject> fgObjects = [];
+                foreach (var fg in fgDictionary)
+                {
+                    if (fg.Value is Dictionary<object, object> fgValue)
+                    {
+                        var fuku = ConvertToStringList(fgValue["fuku"] as List<object>);
+                        var pose = ConvertToNestedStringList(fgValue["pose"] as List<object>);
+                        var face = ConvertToStringDictionary(fgValue["face"] as Dictionary<object, object>);
+                        //check null
+                        if (fgValue["path"] is not string path || fgValue["head"] is not string head || fuku == null || pose == null || face == null)
+                            throw new Exception("fg object has null value");
+                        path = path[4..]; // remove :fg/../
+                        fgObjects.Add(new FgObject(path, head, fuku, pose, face));
+                    }
+                }
+                Process(fgImagePath, savePath, size, fgObjects);
+            }
+            else
+                Console.WriteLine("fg not found");
+        }
+
+        private static void Process2(string fgImagePath, string savePath, HashSet<FgRecord> fgRecords)
+        {
+            var parallelOptions = new ParallelOptions
+            {
+                MaxDegreeOfParallelism = 6 // 设置最大并行度
+            };
+
+            Parallel.ForEach(fgRecords, parallelOptions, fgRecord =>
+            {
+                string originImageBase = Path.Combine(fgImagePath, fgRecord.ChName, fgRecord.Size, fgRecord.File + ".png");
+                string originImageFace = Path.Combine(fgImagePath, fgRecord.ChName, fgRecord.Size, fgRecord.Face + ".png");
+                string targetFilename = $"{fgRecord.File}_{fgRecord.Face}.png";
+                string targetPath = Path.Combine(savePath, fgRecord.Size);
+
+                if (!File.Exists(originImageBase) || !File.Exists(originImageFace))
+                {
+                    Console.WriteLine("ERROR, Image not found. Details:");
+                    Console.WriteLine($"Base: {originImageBase}");
+                    Console.WriteLine($"Face: {originImageFace}");
+                    return;
+                }
+                if (!Directory.Exists(targetPath))
+                    Directory.CreateDirectory(targetPath);
+                targetPath = Path.Combine(targetPath, targetFilename);
+                if (File.Exists(targetPath))
+                {
+                    Console.WriteLine("File already exists, skipping...");
+                    return;
+                }
+                ProcessAndSaveLite(originImageBase, originImageFace, targetPath);
+            });
+
+        }
+
+        private static void Process(string fgImagePath, string savePath, List<object> size, List<FgObject> fgObjects)
         {
             foreach (var fgObject in fgObjects)
             {
@@ -174,6 +202,19 @@ namespace ArtemisFgTools
             }
         }
 
+        private static void ProcessAndSaveLite(string baseImg, string faceImg, string target)
+        {
+            using MagickImage firstImage = new(baseImg);
+            List<int> comment1 = ReadPngComment(firstImage.Comment); //base
+            using MagickImage secondImage = new(faceImg);
+            List<int> comment2 = ReadPngComment(secondImage.Comment); //face
+            int x = comment2[0] - comment1[0]; // face x - base x
+            int y = comment2[1] - comment1[1]; // face y - base y
+            firstImage.Composite(secondImage, x, y, CompositeOperator.Over);
+            firstImage.Write(target);
+            Console.WriteLine($"Image {Path.GetFileName(target)} processing completed.");
+        }
+
         private static void ProcessAndSave(string baseImg, string layerImg, string layer2Img, string target, bool special)
         {
             if (File.Exists(target))
@@ -223,9 +264,7 @@ namespace ArtemisFgTools
 
             LuaTable luaTable = lua.GetTable("exfgtable");
             if (luaTable != null)
-            {
                 return (Dictionary<object, object>?)LuaTableToSs(luaTable);
-            }
             else
             {
                 Console.WriteLine("Lua table not found");
