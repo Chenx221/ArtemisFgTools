@@ -95,8 +95,8 @@ namespace ArtemisFgTools
                     {
                         string size = Path.GetFileName(sizeDir);
                         string[] files = Directory.GetFiles(sizeDir, "*.png");
-                        Dictionary<string, List<string>> baseFiles = new Dictionary<string, List<string>>();
-                        Dictionary<string, List<string>> faceFiles = new Dictionary<string, List<string>>();
+                        Dictionary<string, List<string>> baseFiles = [];
+                        Dictionary<string, List<string>> faceFiles = [];
                         foreach (string file in files)
                         {
                             string fileName = Path.GetFileNameWithoutExtension(file);
